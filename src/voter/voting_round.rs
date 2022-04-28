@@ -314,8 +314,9 @@ impl<H, N, E: Environment<H, N>> VotingRound<H, N, E> where
 		&mut self,
 		commit: &Commit<H, N, E::Signature, E::Id>
 	) -> Result<Option<(H, N)>, E::Error> {
-		let base = validate_commit(commit, self.voters(), &*self.env)?.ghost;
-		if base.is_none() { return Ok(None) }
+		if !validate_commit(commit, self.voters(), &*self.env)?.is_valid() {
+			return Ok(None)
+		}
 
 		for SignedPrecommit { precommit, signature, id } in commit.precommits.iter().cloned() {
 			let import_result = self.votes.import_precommit(&*self.env, precommit, id, signature)?;
@@ -324,7 +325,7 @@ impl<H, N, E: Environment<H, N>> VotingRound<H, N, E> where
 			}
 		}
 
-		Ok(base)
+		Ok(Some((commit.target_hash.clone(), commit.target_number)))
 	}
 
 	/// Get a clone of the finalized sender.
